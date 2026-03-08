@@ -1,0 +1,49 @@
+# ─────────────────────────────────────────────
+#  CI Pipeline — runs on every push and PR
+# ─────────────────────────────────────────────
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout source code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Install the .NET SDK declared in global.json
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # 3. Restore NuGet packages (cached for speed)
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # 4. Build in Release mode — treats warnings as errors
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      # 5. Run tests and emit a JUnit report
+      - name: Test
+        run: |
+          dotnet test --no-build --configuration Release \
+            --logger "trx;LogFileName=results.trx" \
+            --results-directory ./test-results
+
+      # 6. Upload test results as a build artifact
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()   # upload even when tests fail
+        with:
+          name: test-results
+          path: ./test-results/*.trx
