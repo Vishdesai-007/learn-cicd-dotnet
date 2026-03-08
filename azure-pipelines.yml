@@ -13,20 +13,13 @@ pr:
       - main
 
 pool:
-  vmImage: ubuntu-latest
+  name: Default  # self-hosted Mac agent
 
 variables:
   buildConfiguration: Release
 
 steps:
-  # 1. Install the exact SDK version pinned in global.json
-  - task: UseDotNet@2
-    displayName: "Install .NET SDK"
-    inputs:
-      packageType: sdk
-      version: "10.0.x"
-
-  # 2. Restore NuGet packages
+  # 1. Restore NuGet packages
   - script: dotnet restore
     displayName: "Restore dependencies"
 
