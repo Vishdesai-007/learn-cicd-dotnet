@@ -19,6 +19,10 @@ variables:
   buildConfiguration: Release
 
 steps:
+  # 0. Checkout with token so the pipeline can post PR comments
+  - checkout: self
+    persistCredentials: true
+
   # 1. Restore NuGet packages
   - script: dotnet restore
     displayName: "Restore dependencies"
@@ -41,3 +45,11 @@ steps:
     inputs:
       testResultsFormat: VSTest
       testResultsFiles: "$(Agent.TempDirectory)/test-results/*.trx"
+
+  # 6. Claude PR code review — only runs on pull requests
+  - script: python3 .pipeline/claude_review.py
+    displayName: "Claude Code Review"
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    env:
+      ANTHROPIC_API_KEY: $(ANTHROPIC_API_KEY)
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
