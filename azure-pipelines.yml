@@ -1,0 +1,50 @@
+# ─────────────────────────────────────────────────────────────
+#  Azure Pipelines — CI for TodoApi (.NET 10)
+#  Triggers on every push to main and every pull request.
+# ─────────────────────────────────────────────────────────────
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: Release
+
+steps:
+  # 1. Install the exact SDK version pinned in global.json
+  - task: UseDotNet@2
+    displayName: "Install .NET SDK"
+    inputs:
+      packageType: sdk
+      version: "10.0.x"
+
+  # 2. Restore NuGet packages
+  - script: dotnet restore
+    displayName: "Restore dependencies"
+
+  # 3. Build — warnings are visible but don't break the pipeline yet
+  - script: dotnet build --no-restore --configuration $(buildConfiguration)
+    displayName: "Build"
+
+  # 4. Run tests and produce a TRX report Azure DevOps can parse
+  - script: |
+      dotnet test --no-build --configuration $(buildConfiguration) \
+        --logger "trx;LogFileName=results.trx" \
+        --results-directory $(Agent.TempDirectory)/test-results
+    displayName: "Test"
+
+  # 5. Publish test results to the pipeline run summary
+  - task: PublishTestResults@2
+    displayName: "Publish test results"
+    condition: always()
+    inputs:
+      testResultsFormat: VSTest
+      testResultsFiles: "$(Agent.TempDirectory)/test-results/*.trx"
